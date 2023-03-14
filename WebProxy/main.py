@@ -1,6 +1,7 @@
 import io
 from socket import *
 import sys
+CACHED_FILE_PREFIX="c_"
 
 if len(sys.argv) <= 1:
     print('Usage : "python ProxyServer.py server_ip"\n[server_ip : It is the IP Address Of Proxy Server')
@@ -25,14 +26,16 @@ while i < 30:
     message = tcpCliSock.recv(4096).decode()
     # Fill in end.
     print(f"request:\n {message}")
+
     # Extract the filename from the given message
-    filename = (message.split()[1]).partition("/")[2]
-    print(f"filename: {filename}")
+    requestUrl = (message.split()[1]).partition("/")[2]
+    print(f"request URL: {requestUrl}")
+    cachedFilename = CACHED_FILE_PREFIX + requestUrl
     fileExist = "false"
 
     try:
         # Check whether the file exist in the cache
-        f = open(filename, "r")
+        f = open(cachedFilename, "r")
         outputData = f.readlines()
         fileExist = "true"
         # ProxyServer finds a cache hit and generates a response message
@@ -49,16 +52,18 @@ while i < 30:
             # Fill in start.
             c = socket(AF_INET, SOCK_STREAM)
             # Fill in end.
-            hostn = (filename.replace("www.", "", 1)).split("/")[0]
+            resqFilename = "/".join(requestUrl.split("/")[1:])
+            print(f"Request File: {resqFilename}")
+            hostn = (requestUrl.split("/")[0]).replace("www.", "", 1)
             print(f"hostname: {hostn}")
             try:
                 # Connect to the socket to port 80
                 # Fill in start.
-                c.connect((hostn, 80))
+                c.connect((hostn, 443))
                 # Fill in end.
                 # Create a temporary file on this socket and ask port 80 for the file requested by the client
                 fileObj = c.makefile('wr', 1)
-                fileObj.write("GET " + filename + " HTTP / 1.0\n\n")
+                fileObj.write("GET " + resqFilename + " HTTP / 1.1\n\n")
                 # Read the response into buffer
                 # Fill in start.
                 resp = fileObj.readlines()
